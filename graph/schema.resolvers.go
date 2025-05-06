@@ -13,12 +13,45 @@ import (
 
 // CreateTodo is the resolver for the createTodo field.
 func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
+	todo := &model.Todo{
+		ID:   fmt.Sprintf("T%d", len(r.Resolver.todos)+1),
+		Text: input.Text,
+		Done: false,
+		User: &model.User{
+			ID:   input.UserID,
+			Name: fmt.Sprintf("ユーザー%s", input.UserID),
+		},
+	}
+	r.Resolver.todos = append(r.Resolver.todos, todo)
+	return todo, nil
 }
 
 // Todos is the resolver for the todos field.
 func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: Todos - todos"))
+	if len(r.Resolver.todos) == 0 {
+		// 初期データとして2件のTodoを追加
+		r.Resolver.todos = append(r.Resolver.todos, &model.Todo{
+			ID:   "T1",
+			Text: "GraphQLの勉強をする",
+			Done: false,
+			User: &model.User{
+				ID:   "U1",
+				Name: "ユーザー1",
+			},
+		})
+
+		r.Resolver.todos = append(r.Resolver.todos, &model.Todo{
+			ID:   "T2",
+			Text: "リゾルバーを実装する",
+			Done: true,
+			User: &model.User{
+				ID:   "U1",
+				Name: "ユーザー1",
+			},
+		})
+	}
+
+	return r.Resolver.todos, nil
 }
 
 // Mutation returns MutationResolver implementation.
