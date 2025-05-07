@@ -8,50 +8,115 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
+	"github.com/sugar2456/gqlgen-todos/ent"
+	"github.com/sugar2456/gqlgen-todos/ent/user"
 	"github.com/sugar2456/gqlgen-todos/graph/model"
 )
 
 // CreateTodo is the resolver for the createTodo field.
 func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	todo := &model.Todo{
-		ID:   fmt.Sprintf("T%d", len(r.Resolver.todos)+1),
-		Text: input.Text,
-		Done: false,
-		User: &model.User{
-			ID:   input.UserID,
-			Name: fmt.Sprintf("ユーザー%s", input.UserID),
-		},
+	// ユーザーがデータベースに存在するか確認
+	u, err := r.Client.User.Query().Where(user.ID(input.UserID)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// ユーザーが存在しない場合は作成
+			u, err = r.Client.User.Create().
+				SetID(input.UserID).
+				SetName(fmt.Sprintf("ユーザー%s", input.UserID)).
+				Save(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("ユーザーの作成に失敗しました: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("ユーザーのクエリに失敗しました: %w", err)
+		}
 	}
-	r.Resolver.todos = append(r.Resolver.todos, todo)
-	return todo, nil
+
+	// 新しいTodoをデータベースに作成
+	t, err := r.Client.Todo.Create().
+		SetID(uuid.New().String()). // UUIDを使用してユニークなIDを生成
+		SetText(input.Text).
+		SetDone(false).
+		SetUser(u). // ユーザーを関連付け
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("todoの作成に失敗しました: %w", err)
+	}
+
+	// EntのTodoエンティティからGraphQLのTodoモデルに変換
+	return entTodoToGraphQL(t, u), nil
 }
 
 // Todos is the resolver for the todos field.
 func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	if len(r.Resolver.todos) == 0 {
-		// 初期データとして2件のTodoを追加
-		r.Resolver.todos = append(r.Resolver.todos, &model.Todo{
-			ID:   "T1",
-			Text: "GraphQLの勉強をする",
-			Done: false,
-			User: &model.User{
-				ID:   "U1",
-				Name: "ユーザー1",
-			},
-		})
-
-		r.Resolver.todos = append(r.Resolver.todos, &model.Todo{
-			ID:   "T2",
-			Text: "リゾルバーを実装する",
-			Done: true,
-			User: &model.User{
-				ID:   "U1",
-				Name: "ユーザー1",
-			},
-		})
+	// entクライアントを使ってTodoを取得
+	todos, err := r.Client.Todo.Query().
+		WithUser(). // ユーザー情報も一緒に取得
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("todoの取得に失敗しました: %w", err)
 	}
 
-	return r.Resolver.todos, nil
+	// 結果が0件の場合は、サンプルデータを作成
+	if len(todos) == 0 {
+		// サンプルユーザーを作成
+		u, err := r.Client.User.Create().
+			SetID("U1").
+			SetName("ユーザー1").
+			Save(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("サンプルユーザーの作成に失敗しました: %w", err)
+		}
+
+		// サンプルTodoを作成
+		_, err = r.Client.Todo.Create().
+			SetID("T1").
+			SetText("GraphQLの勉強をする").
+			SetDone(false).
+			SetUser(u).
+			Save(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("サンプルTodoの作成に失敗しました: %w", err)
+		}
+
+		_, err = r.Client.Todo.Create().
+			SetID("T2").
+			SetText("リゾルバーを実装する").
+			SetDone(true).
+			SetUser(u).
+			Save(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("サンプルTodoの作成に失敗しました: %w", err)
+		}
+
+		// 再度Todoを取得
+		todos, err = r.Client.Todo.Query().WithUser().All(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("todoの再取得に失敗しました: %w", err)
+		}
+	}
+
+	// entのTodoエンティティをGraphQLのTodoモデルに変換
+	result := make([]*model.Todo, len(todos))
+	for i, t := range todos {
+		result[i] = entTodoToGraphQL(t, t.Edges.User)
+	}
+
+	return result, nil
+}
+
+// entTodoエンティティをGraphQLのTodoモデルに変換するヘルパー関数
+func entTodoToGraphQL(t *ent.Todo, u *ent.User) *model.Todo {
+	return &model.Todo{
+		ID:   t.ID,
+		Text: t.Text,
+		Done: t.Done,
+		User: &model.User{
+			ID:   u.ID,
+			Name: u.Name,
+		},
+	}
 }
 
 // Mutation returns MutationResolver implementation.

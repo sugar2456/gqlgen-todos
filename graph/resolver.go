@@ -5,9 +5,9 @@ package graph
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 import (
-	"github.com/sugar2456/gqlgen-todos/graph/model"
+	"github.com/sugar2456/gqlgen-todos/ent"
 )
 
 type Resolver struct {
-	todos []*model.Todo
+	Client *ent.Client
 }
