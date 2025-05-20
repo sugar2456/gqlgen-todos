@@ -1,7 +1,7 @@
 {
     "name": "GO Container",
     "dockerComposeFile": ["../compose.yml"],
-    "service": "app",
+    "service": "backend",
     "workspaceFolder": "/usr/src/app",
     "shutdownAction": "none",
     "remoteUser": "vscode",
