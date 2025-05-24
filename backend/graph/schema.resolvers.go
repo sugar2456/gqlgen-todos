@@ -106,17 +106,21 @@ func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
 	return result, nil
 }
 
-// entTodoエンティティをGraphQLのTodoモデルに変換するヘルパー関数
-func entTodoToGraphQL(t *ent.Todo, u *ent.User) *model.Todo {
-	return &model.Todo{
-		ID:   t.ID,
-		Text: t.Text,
-		Done: t.Done,
-		User: &model.User{
-			ID:   u.ID,
-			Name: u.Name,
-		},
+// Users is the resolver for the users field.
+func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
+	// entクライアントを使ってユーザーを取得
+	users, err := r.Client.User.Query().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("ユーザーの取得に失敗しました: %w", err)
 	}
+
+	// entのUserエンティティをGraphQLのUserモデルに変換
+	result := make([]*model.User, len(users))
+	for i, u := range users {
+		result[i] = entUserToGraphQL(u)
+	}
+
+	return result, nil
 }
 
 // Mutation returns MutationResolver implementation.
