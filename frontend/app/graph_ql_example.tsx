@@ -1,24 +1,9 @@
 'use client';
 
-import { gql, useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client';
 import { useState } from 'react';
-
-// Todosクエリ
-const GET_TODOS = gql`
-  query Todos {
-    todos {
-      id
-      text
-      done
-    }
-  }
-`;
-
-interface Todo {
-  id: string;
-  text: string;
-  done: boolean;
-}
+import { GET_TODOS } from '@/lib/graphql/queries/todoQueries';
+import { Todo, TodosQuery } from '@/lib/graphql/generated/types';
 
 export default function TodoList() {
   const { loading, error, data } = useQuery(GET_TODOS);
