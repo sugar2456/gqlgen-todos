@@ -123,6 +123,19 @@ func (r *queryResolver) Users(ctx context.Context) ([]*model.User, error) {
 	return result, nil
 }
 
+// User is the resolver for the user field.
+func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
+	user, err := r.Client.User.Query().Where(user.ID(id)).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("ユーザーが見つかりません: %w", err)
+		}
+		return nil, fmt.Errorf("ユーザーの取得に失敗しました: %w", err)
+	}
+	// entのUserエンティティをGraphQLのUserモデルに変換
+	return entUserToGraphQL(user), nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
