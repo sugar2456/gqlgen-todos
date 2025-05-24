@@ -4,10 +4,27 @@ import { GET_USERS } from "@/lib/graphql/queries/userQueries";
 import { useQuery } from "@apollo/client";
 import { UserList } from "./user_list";
 
-export default function UsersClient() {
-  const { loading, error, data } = useQuery(GET_USERS);
+interface User {
+  id: string | number;
+  name: string;
+}
 
-  if (loading) return <p>読み込み中</p>;
+interface UsersData {
+  users: User[];
+}
+
+interface UsersClientProps {
+  initialData?: UsersData;
+}
+
+export default function UsersClient({ initialData }: UsersClientProps) {
+  // initialDataが存在する場合は使用し、存在しない場合は通常のクエリを実行
+  const { loading, error, data } = useQuery<UsersData>(GET_USERS);
+  
+  // サーバーから取得したデータまたはクエリ結果を使用
+  const userData = data || initialData;
+
+  if (loading && !initialData) return <p>読み込み中...</p>;
 
   if (error) {
     return (
@@ -22,7 +39,7 @@ export default function UsersClient() {
     );
   }
 
-  const users = data?.users || [];
+  const users = userData?.users || [];
 
   return <UserList users={users} />;
 }
