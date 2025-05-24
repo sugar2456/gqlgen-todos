@@ -3,7 +3,7 @@
 import { useQuery } from '@apollo/client';
 import { useState } from 'react';
 import { GET_TODOS } from '@/lib/graphql/queries/todoQueries';
-import { Todo, TodosQuery } from '@/lib/graphql/generated/types';
+import { Todo } from '@/lib/graphql/generated/types';
 
 export default function TodoList() {
   const { loading, error, data } = useQuery(GET_TODOS);
