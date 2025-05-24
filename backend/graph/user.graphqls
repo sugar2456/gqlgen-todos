@@ -1,0 +1,10 @@
+# user.graphqls
+type User {
+  id: ID!
+  name: String!
+}
+
+extend type Query {
+  users: [User!]!
+  user(id: ID!): User
+}

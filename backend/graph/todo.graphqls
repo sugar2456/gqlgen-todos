@@ -1,7 +1,4 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
+# todo.graphqls
 type Todo {
   id: ID!
   text: String!
@@ -9,15 +6,8 @@ type Todo {
   user: User!
 }
 
-type User {
-  id: ID!
-  name: String!
-}
-
-type Query {
+extend type Query {
   todos: [Todo!]!
-  users: [User!]!
-  user(id: ID!): User
 }
 
 input NewTodo {
